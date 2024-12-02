@@ -1,0 +1,403 @@
+# Mandatory configs
+nameOverride: test-nginx
+podDisruptionBudget: 
+  minAvailable: "50%"
+deploymentLabels: {}
+deploymentAnnotations: {}
+
+deploymentType: ROLLING
+deployment:
+  strategy:
+    recreate: {}
+    rolling:
+      maxSurge: "25%"
+      maxUnavailable: 1
+
+containerSpec:
+  lifecycle:
+    enabled: false
+    preStop:
+      exec:
+        command: ["sleep","10"]
+    postStart:
+      httpGet:
+        host: example.com
+        path: /example
+        port: 90
+
+replicaCount: 1
+MinReadySeconds: 60
+GracePeriod: 30
+image:
+  pullPolicy: IfNotPresent
+restartPolicy: Always
+service:
+  type: ClusterIP
+  # enabled: true
+  #name: "service-1234567890"
+  loadBalancerSourceRanges: []
+  # loadBalancerSourceRanges: 
+  #    - 1.2.3.4/32
+  #    - 1.2.5.6/23
+  annotations: {}
+    # test1: test2
+    # test3: test4
+ContainerPort:
+  - name: app
+    port: 80
+    servicePort: 80
+    envoyPort: 8799
+    useHTTP2: false
+    supportStreaming: false
+    idleTimeout: 1800s
+    protocol: TCP
+    servicemonitor:
+      enabled: false
+      path: /abc
+      scheme: 'http'
+      interval: 30s
+      scrapeTimeout: 20s
+      metricRelabelings:
+        - sourceLabels: [namespace]
+          regex: '(.*)'
+          replacement: myapp
+          targetLabel: target_namespace
+resources:
+  # We usually recommend not to specify default resources and to leave this as a conscious
+  # choice for the user. This also increases chances charts run on environments with little
+  # resources, such as Minikube. If you do want to specify resources, uncomment the following
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  limits:
+    cpu: 1
+    memory: 200Mi
+  requests:
+    cpu: 0.10
+    memory: 100Mi
+
+# Optional configs
+LivenessProbe:
+  Path: ""
+  port: 80
+  scheme: ""
+  httpHeaders: []
+#    - name: Custom-Header
+#      value: abc
+  tcp: false
+  command: []
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 5
+  failureThreshold: 3
+  grpc: {}
+
+
+ReadinessProbe:
+  Path: ""
+  port: 80
+  scheme: ""
+  httpHeaders: []
+#    - name: Custom-Header
+#      value: abc
+  tcp: false
+  command: []
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 5
+  failureThreshold: 3
+  grpc: {}
+
+
+StartupProbe:
+  Path: ""
+  port: 80
+  initialDelaySeconds: 20
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 5
+  failureThreshold: 3
+  httpHeaders: []
+  command: []
+  tcp: false
+  grpc: {}
+
+
+ingress:
+  enabled: true
+  className: "alb"
+  labels: {}
+  annotations:
+    alb.ingress.kubernetes.io/load-balancer-name: 'poc-public'
+    alb.ingress.kubernetes.io/group.name: 'poc-public'
+    alb.ingress.kubernetes.io/scheme: 'internet-facing'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/target-type: ip
+  
+#    nginx.ingress.kubernetes.io/rewrite-target: /$2
+#    nginx.ingress.kubernetes.io/canary: "true"
+#    nginx.ingress.kubernetes.io/canary-weight: "10"
+
+  hosts:
+    - host: test-nginx-ud.poc.in
+      pathType: "ImplementationSpecific"
+      paths:
+        - /
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+winterSoldier:
+  enabled: false
+  apiVersion: pincher.devtron.ai/v1alpha1
+  annotation: {}
+  labels: {}
+  type: Deployment
+  timeRangesWithZone:
+    timeZone: "Asia/Kolkata"
+    timeRanges: []
+  action: sleep
+  targetReplicas: []
+  fieldSelector: 
+    - AfterTime(AddTime(ParseTime({{metadata.creationTimestamp}}, '2006-01-02T15:04:05Z'), '5m'), Now())
+
+networkPolicy:
+  enabled: false
+  annotations: {}
+  labels: {}
+  podSelector: 
+    matchExpressions: []
+    matchLabels: {}
+  policyTypes: []
+  ingress: []
+  egress: []
+
+
+ingressInternal:
+  enabled: false
+  className: ""
+  annotations: {}
+ #    kubernetes.io/ingress.class: nginx
+ #    kubernetes.io/tls-acme: "true"
+ #    nginx.ingress.kubernetes.io/canary: "true"
+ #    nginx.ingress.kubernetes.io/canary-weight: "10"
+
+  hosts:
+    - host: chart-example1.internal
+      pathType: "ImplementationSpecific"
+      paths:
+        - /example1
+    - host: chart-example2.internal
+      pathType: "ImplementationSpecific"
+      paths:
+        - /example2
+        - /example2/healthz
+  tls: []
+  #  - secretName: chart-example-tls
+  #    hosts:
+  #      - chart-example.local
+
+command:
+  workingDir: {}
+  enabled: false
+  value: []
+    
+args: 
+  enabled: false
+  value:
+    - /bin/sh
+    - -c
+    - touch /tmp/healthy; sleep 30; rm -rf /tmp/healthy; sleep 600
+
+#For adding custom labels to pods
+
+podLabels: {}
+#  customKey: customValue
+podAnnotations: {}
+#  customKey: customValue
+
+rawYaml: []
+
+topologySpreadConstraints: []
+
+initContainers: []
+  ## Additional init containers to run before the Scheduler pods.
+  ## for example, be used to run a sidecar that chown Logs storage .
+  #- name: volume-mount-hack
+  #  image: busybox
+  #  command: ["sh", "-c", "chown -R 1000:1000 logs"]
+  #  volumeMounts:
+  #    - mountPath: /usr/local/airflow/logs
+  #      name: logs-data
+
+containers: []
+  ## Additional containers to run along with application pods.
+  ## for example, be used to run a sidecar that chown Logs storage .
+  #- name: volume-mount-hack
+  #  image: busybox
+  #  command: ["sh", "-c", "chown -R 1000:1000 logs"]
+  #  volumeMounts:
+  #    - mountPath: /usr/local/airflow/logs
+  #      name: logs-data
+
+volumeMounts: []
+#     - name: log-volume
+#       mountPath: /var/log
+
+volumes: []
+#     - name: log-volume
+#       emptyDir: {}
+
+
+tolerations: []
+
+podSecurityContext: {}
+
+containerSecurityContext: {}
+
+affinity:
+  enabled: false
+  values: {}
+
+
+autoscaling:
+  enabled: true
+  MinReplicas: 1
+  MaxReplicas: 2
+  TargetCPUUtilizationPercentage: 70
+  TargetMemoryUtilizationPercentage: 80
+  annotations: {}
+  labels: {}
+  behavior: {}
+  containerResource:
+    enabled: false
+    TargetCPUUtilizationPercentage: 90
+    TargetMemoryUtilizationPercentage: 80  
+
+
+  extraMetrics: []
+#    - external:
+#        metricName: pubsub.googleapis.com|subscription|num_undelivered_messages
+#        metricSelector:
+#          matchLabels:
+#            resource.labels.subscription_id: echo-read
+#        targetAverageValue: "2"
+#      type: External
+#
+
+kedaAutoscaling:
+  enabled: false
+  envSourceContainerName: "" # Optional. Default: .spec.template.spec.containers[0]
+  minReplicaCount: 1 
+  maxReplicaCount: 2
+  advanced: {}
+  triggers: []
+  triggerAuthentication:
+    enabled: false
+    name: ""
+    spec: {}
+  authenticationRef: {}
+
+# kedaHttpScaledObject:
+#   enabled: false
+#   minReplicaCount: 1
+#   maxReplicaCount: 2
+#   targetPendingRequests: 
+#   scaledownPeriod: 
+#   servicePort: 80 # port of the service (required)
+
+prometheus:
+  release: monitoring
+
+server:
+  deployment:
+    image_tag: latest
+    image: "nginx"
+
+servicemonitor:
+  additionalLabels: {}
+
+ConfigMaps:
+  enabled: false
+  maps:
+  - name: config-map-1
+    type: environment
+    external: false
+    data:
+      key1: key1value-1
+      key2: key2value-1
+      key3: key3value-1
+  - name: config-map-2
+    type: volume
+    external: false
+    mountPath: /tmp
+    filePermission: "0400"
+    data:
+      test.yaml: |
+        club: manchester utd
+        nation: england
+
+ConfigSecrets:
+  enabled: true
+  secrets:
+  - name: config-secret-1
+    type: environment
+    external: true
+    externalType: ESO_AWSSecretsManager
+    externalSecretStoreName: cluster-secret-store
+    esoSecretData:
+      secretStore:
+      esoData:
+        - secretKey: myname_username
+          key: ud-test-poc
+          property: ud_name
+        - secretKey: myname_surname
+          key: ud-test-poc
+          property: ud_surname
+        - secretKey: myname_position
+          key: ud-test-poc
+          property: ud_position
+
+envoyproxy:
+  image: quay.io/devtron/envoy:v1.16.0
+  configMapName: ""
+  lifecycle: {}
+  resources:
+    limits:
+      cpu: 50m
+      memory: 50Mi
+    requests:
+      cpu: 50m
+      memory: 50Mi
+
+## Pods Service Account
+## ref: https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/
+##
+serviceAccount:
+  ## @param serviceAccount.create Enable creation of ServiceAccount for pods
+  ##  
+  create: true
+  ## @param serviceAccount.name The name of the ServiceAccount to use.
+  ## If not set and create is true, a name is generated using the `.Chart.Name .fullname` template
+  name: "test"
+  ## @param serviceAccount.annotations Annotations for service account. Evaluated as a template.
+  ## Only used if `create` is `true`.
+  ##  
+  annotations: {}
+
+imagePullSecrets: 
+ # - test1
+  # - test2
+hostAliases: []
+#   - ip: "127.0.0.1"
+#     hostnames:
+#     - "foo.local"
+#     - "bar.local"
+#   - ip: "10.1.2.3"
+#     hostnames:
+#     - "foo.remote"
+#     - "bar.remote"
+
+verticalPodScaling:
+  enabled: false
