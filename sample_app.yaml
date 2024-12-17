@@ -1,5 +1,5 @@
 # Mandatory configs
-nameOverride: test-nginx
+nameOverride: ingress-app   #Need to change
 podDisruptionBudget: 
   minAvailable: "50%"
 deploymentLabels: {}
@@ -44,7 +44,7 @@ service:
     # test3: test4
 ContainerPort:
   - name: app
-    port: 80
+    port: 80              #Need to change if container port is not 80
     servicePort: 80
     envoyPort: 8799
     useHTTP2: false
@@ -66,17 +66,17 @@ resources:
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
   # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.   ###Adding ###
   limits:
-    cpu: 1
-    memory: 200Mi
+    cpu: 0.10
+    memory: 100Mi
   requests:
     cpu: 0.10
     memory: 100Mi
 
 # Optional configs
 LivenessProbe:
-  Path: ""
+  Path: "/"              # Need to update healthcheck detail
   port: 80
   scheme: ""
   httpHeaders: []
@@ -93,7 +93,7 @@ LivenessProbe:
 
 
 ReadinessProbe:
-  Path: ""
+  Path: "/"        # Need to update healthcheck detail
   port: 80
   scheme: ""
   httpHeaders: []
@@ -110,7 +110,7 @@ ReadinessProbe:
 
 
 StartupProbe:
-  Path: ""
+  Path: "/"         # Need to update healthcheck detail
   port: 80
   initialDelaySeconds: 20
   periodSeconds: 10
@@ -128,25 +128,44 @@ ingress:
   className: "alb"
   labels: {}
   annotations:
-    alb.ingress.kubernetes.io/load-balancer-name: 'poc-public'
-    alb.ingress.kubernetes.io/group.name: 'poc-public'
+    #alb.ingress.kubernetes.io/load-balancer-name: 'example-public'
+    alb.ingress.kubernetes.io/group.name: 'example-public'
     alb.ingress.kubernetes.io/scheme: 'internet-facing'
-    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: '443'
+    alb.ingress.kubernetes.io/certificate-arn: 'arn:aws:acm:ap-south-1'
     alb.ingress.kubernetes.io/target-type: ip
-  
-#    nginx.ingress.kubernetes.io/rewrite-target: /$2
-#    nginx.ingress.kubernetes.io/canary: "true"
-#    nginx.ingress.kubernetes.io/canary-weight: "10"
+    alb.ingress.kubernetes.io/load-balancer-attributes: deletion_protection.enabled=true,idle_timeout.timeout_seconds=600,client_keep_alive.seconds=3600
 
   hosts:
-    - host: test-nginx-ud.poc.in
+    - host: ingress-app.example.co
       pathType: "ImplementationSpecific"
       paths:
-        - /
+        - /*
   tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
+
+ingressInternal:
+  enabled: true
+  className: "alb"
+  labels:
+    type: 'internal'
+    abcd: 'testabcd'
+  annotations:
+      #alb.ingress.kubernetes.io/load-balancer-name: 'example-internal'
+      alb.ingress.kubernetes.io/group.name: 'example-internal'
+      alb.ingress.kubernetes.io/scheme: 'internal'
+      alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]'
+      alb.ingress.kubernetes.io/ssl-redirect: '443'
+      alb.ingress.kubernetes.io/certificate-arn: 'arn:aws:acm:ap-south-1'
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/load-balancer-attributes: deletion_protection.enabled=true,idle_timeout.timeout_seconds=600,client_keep_alive.seconds=3600
+
+  hosts:
+    - host: ingress-app.example.net
+      pathType: "ImplementationSpecific"
+      paths:
+        - /*
+  tls: []
 
 winterSoldier:
   enabled: false
@@ -173,30 +192,6 @@ networkPolicy:
   ingress: []
   egress: []
 
-
-ingressInternal:
-  enabled: false
-  className: ""
-  annotations: {}
- #    kubernetes.io/ingress.class: nginx
- #    kubernetes.io/tls-acme: "true"
- #    nginx.ingress.kubernetes.io/canary: "true"
- #    nginx.ingress.kubernetes.io/canary-weight: "10"
-
-  hosts:
-    - host: chart-example1.internal
-      pathType: "ImplementationSpecific"
-      paths:
-        - /example1
-    - host: chart-example2.internal
-      pathType: "ImplementationSpecific"
-      paths:
-        - /example2
-        - /example2/healthz
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
 
 command:
   workingDir: {}
@@ -312,8 +307,8 @@ prometheus:
 
 server:
   deployment:
-    image_tag: latest
-    image: "nginx"
+    image_tag: dev-1234
+    image: "ap-south-1.amazonaws.com/poc-app"
 
 servicemonitor:
   additionalLabels: {}
@@ -321,14 +316,14 @@ servicemonitor:
 ConfigMaps:
   enabled: true
   maps:
-  - name: config-map-1
+  - name: nginx-poc2-config-map-1 # Need to change for new app
     type: environment
     external: false
     data:
       key1: key1value-1
       key2: key2value-1
       key3: key3value-1
-  - name: config-map-2
+  - name: nginx-poc2-config-map-2   # Need to change for new app
     type: volume
     external: false
     mountPath: /tmp
@@ -341,17 +336,26 @@ ConfigMaps:
 ConfigSecrets:
   enabled: true
   secrets:
-  - name: config-secret-1
+  - name:  ingress-app-config-secret-ex   # Need to change 
     type: environment
     external: true
     externalType: ESO_AWSSecretsManager
-    externalSecretStoreName: cluster-secret-store
+    externalSecretStoreName: nginx-poc-secret-store
     esoSecretData:
       secretStore:
+        aws:
+          service: SecretsManager
+          region: ap-south-1
+          auth:
+            secretRef:
+            jwt:
+              serviceAccountRef:
+                name: external-secret-manager-sa
+                namespace: external-secrets
       esoData:
-        - secretKey: myname_username
-          key: ud-test-poc
-          property: ud_name
+        - secretKey: myname_username     # key name in pod
+          key: ud-test-poc               # Secret Manager Name
+          property: ud_name              # key name in Secret Manager     
         - secretKey: myname_surname
           key: ud-test-poc
           property: ud_surname
@@ -380,7 +384,7 @@ serviceAccount:
   create: true
   ## @param serviceAccount.name The name of the ServiceAccount to use.
   ## If not set and create is true, a name is generated using the `.Chart.Name .fullname` template
-  name: "test"
+  name: "ingress-app"    ##Need to Change for new APP
   ## @param serviceAccount.annotations Annotations for service account. Evaluated as a template.
   ## Only used if `create` is `true`.
   ##  
